@@ -1,4 +1,4 @@
-import { chromium, BrowserContext } from 'playwright';
+import { chromium, BrowserContext, Browser } from 'playwright';
 
 export interface BrowserBridgeOptions {
   cdpEndpoint?: string;
@@ -8,6 +8,7 @@ export interface BrowserBridgeOptions {
 
 export class BrowserBridge {
   private context: BrowserContext | null = null;
+  private browser: Browser | null = null;
   private options: BrowserBridgeOptions;
 
   constructor(options: BrowserBridgeOptions = {}) {
@@ -21,7 +22,9 @@ export class BrowserBridge {
 
   async connect(): Promise<BrowserContext> {
     try {
-      this.context = await chromium.connectOverCDP(this.options.cdpEndpoint!);
+      this.browser = await chromium.connectOverCDP(this.options.cdpEndpoint!);
+      const contexts = this.browser.contexts();
+      this.context = contexts[0] || await this.browser.newContext();
       return this.context;
     } catch (error) {
       console.log('CDP connection failed, falling back to persistent context launch');
@@ -36,6 +39,10 @@ export class BrowserBridge {
   }
 
   async disconnect(): Promise<void> {
+    if (this.browser) {
+      await this.browser.close();
+      this.browser = null;
+    }
     if (this.context) {
       await this.context.close();
       this.context = null;

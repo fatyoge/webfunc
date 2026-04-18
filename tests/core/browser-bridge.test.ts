@@ -21,7 +21,12 @@ describe('BrowserBridge', () => {
       pages: () => [{ url: () => 'https://example.com' }],
       close: vi.fn(),
     };
-    (chromium.connectOverCDP as any).mockResolvedValue(mockContext);
+    const mockBrowser = {
+      contexts: () => [mockContext],
+      newContext: vi.fn(),
+      close: vi.fn(),
+    };
+    (chromium.connectOverCDP as any).mockResolvedValue(mockBrowser);
 
     const bridge = new BrowserBridge();
     const context = await bridge.connect();
@@ -52,12 +57,17 @@ describe('BrowserBridge', () => {
       pages: () => [],
       close: vi.fn(),
     };
-    (chromium.connectOverCDP as any).mockResolvedValue(mockContext);
+    const mockBrowser = {
+      contexts: () => [mockContext],
+      newContext: vi.fn(),
+      close: vi.fn(),
+    };
+    (chromium.connectOverCDP as any).mockResolvedValue(mockBrowser);
 
     const bridge = new BrowserBridge();
     await bridge.connect();
     await bridge.disconnect();
 
-    expect(mockContext.close).toHaveBeenCalled();
+    expect(mockBrowser.close).toHaveBeenCalled();
   });
 });

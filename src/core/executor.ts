@@ -54,7 +54,7 @@ export class SkillExecutor {
 
         if (step.extract) {
           for (const [key, path] of Object.entries(step.extract)) {
-            const result = JSONPath({ path, json: response.data });
+            const result = JSONPath({ path, json: response.data as object }) as unknown[];
             extractedValues[key] = result[0];
           }
         }
@@ -82,7 +82,7 @@ export class SkillExecutor {
     if (skill.output.extract) {
       const lastResponse = Object.values(stepResults).pop()?.response;
       for (const [key, path] of Object.entries(skill.output.extract)) {
-        const result = JSONPath({ path, json: lastResponse });
+        const result = JSONPath({ path, json: lastResponse as object }) as unknown[];
         extracted[key] = result[0];
       }
     }
@@ -99,7 +99,7 @@ export class SkillExecutor {
       if (key === 'status') {
         if (status !== expected) return `expected status ${expected}, got ${status}`;
       } else {
-        const result = JSONPath({ path: key, json: data });
+        const result = JSONPath({ path: key, json: data as object }) as unknown[];
         const actual = result[0];
         if (actual !== expected) return `expected ${key}=${expected}, got ${actual}`;
       }
