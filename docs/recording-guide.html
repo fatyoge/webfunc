@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Webfunc Skill 录制使用指南</title>
+    <title>Webfunc 使用指南</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -26,6 +26,14 @@
             color: #666;
             font-size: 14px;
             margin-bottom: 30px;
+        }
+        .section-title {
+            font-size: 20px;
+            font-weight: 600;
+            color: #1a1a1a;
+            margin: 30px 0 15px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid #0066ff;
         }
         .step {
             background: #fff;
@@ -100,6 +108,14 @@
             margin: 12px 0;
             font-size: 14px;
         }
+        .feature-box {
+            background: #e3f2fd;
+            border-left: 4px solid #2196f3;
+            padding: 12px 16px;
+            border-radius: 4px;
+            margin: 12px 0;
+            font-size: 14px;
+        }
         ul, ol {
             margin: 12px 0 12px 20px;
         }
@@ -132,51 +148,90 @@
             font-weight: 600;
             color: #555;
         }
-        .btn {
-            display: inline-block;
-            background: #0066ff;
-            color: #fff;
-            padding: 8px 20px;
-            border-radius: 6px;
+        .nav {
+            background: #fff;
+            border-radius: 12px;
+            padding: 16px 24px;
+            margin-bottom: 20px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+        }
+        .nav a {
+            color: #0066ff;
             text-decoration: none;
+            margin-right: 20px;
             font-size: 14px;
-            font-weight: 500;
+        }
+        .nav a:hover {
+            text-decoration: underline;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>Webfunc Skill 录制使用指南</h1>
-        <p class="subtitle">将浏览器操作录制为可重复执行的 Skill 模板</p>
+        <h1>Webfunc 使用指南</h1>
+        <p class="subtitle">浏览器自动化 + LLM 办公助手框架 — 将操作录制为 Skill，支持 CLI 执行和 MCP 大模型调用</p>
+
+        <div class="nav">
+            <a href="#record">录制 Skill</a>
+            <a href="#run">执行 Skill</a>
+            <a href="#mcp">MCP Server</a>
+            <a href="#format">Skill 格式</a>
+            <a href="#faq">常见问题</a>
+        </div>
+
+        <!-- 功能概览 -->
+        <div class="section-title">功能概览</div>
+        <div class="step">
+            <div class="step-content">
+                <ul>
+                    <li><strong>录制 (record)</strong> — 通过 CDP 拦截浏览器请求，将操作录制为 Skill JSON</li>
+                    <li><strong>执行 (run)</strong> — 复现录制的 HTTP 流程，支持参数注入和数据提取</li>
+                    <li><strong>浏览器模式</strong> — 在已登录浏览器内执行 fetch，自动维持 session</li>
+                    <li><strong>HTML 解析</strong> — 自动将 HTML 表格响应解析为结构化数据</li>
+                    <li><strong>MCP Server</strong> — 将 Skills 注册为 MCP Tools，供 Claude/GPT/Cursor 等大模型调用</li>
+                </ul>
+            </div>
+        </div>
 
         <!-- Step 1 -->
+        <div class="section-title" id="record">一、录制 Skill</div>
+
         <div class="step">
             <div class="step-header">
                 <div class="step-number">1</div>
                 <div class="step-title">环境准备：启动浏览器</div>
             </div>
             <div class="step-content">
-                <p>Webfunc 需要通过 CDP（Chrome DevTools Protocol）连接浏览器，或者启动一个持久化的浏览器实例。</p>
+                <p>Webfunc 需要通过 CDP（Chrome DevTools Protocol）连接浏览器。</p>
 
-                <p><strong>方案 A：使用已有的 Chrome（推荐，已登录状态）</strong></p>
-                <p>关闭所有 Chrome 窗口后，用以下命令启动带远程调试的 Chrome：</p>
-                <pre><span class="prompt"># Windows</span>
+                <p><strong>方案 A：使用已有的 Chrome/Edge（推荐，保留登录态）</strong></p>
+                <p>关闭所有浏览器窗口后，用以下命令启动带远程调试的浏览器：</p>
+                <pre><span class="prompt"># Windows Edge</span>
 "C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe" ^
   --remote-debugging-port=9222 ^
-  --user-data-dir="C:\temp\chrome-dev"</pre>
+  --user-data-dir="C:\temp\chrome-dev"
 
-                <p><strong>方案 B：让 Webfunc 自动启动浏览器</strong></p>
-                <p>在录制时通过 <code>-p</code> 参数指定用户数据目录：</p>
-                <pre><span class="prompt"># 录制时会自动启动浏览器</span>
-node bin/webfunc record zhihu-hot -o https://www.zhihu.com -p "C:\temp\chrome-dev"</pre>
+<span class="prompt"># Windows Chrome</span>
+"C:\Program Files\Google\Chrome\Application\chrome.exe" ^
+  --remote-debugging-port=9222 ^
+  --user-data-dir="C:\temp\chrome-dev"
+
+<span class="prompt"># macOS</span>
+/Applications/Google\ Chrome.app/Contents/MacOS/Google\ Chrome \
+  --remote-debugging-port=9222 \
+  --user-data-dir="/tmp/chrome-dev"
+
+<span class="prompt"># Linux</span>
+google-chrome \
+  --remote-debugging-port=9222 \
+  --user-data-dir="/tmp/chrome-dev"</pre>
 
                 <div class="tip">
-                    <strong>提示：</strong>方案 A 能保留你已登录的状态（Cookie），方案 B 也能保留，但需要先手动登录一次。
+                    <strong>提示：</strong>方案 A 能保留你已登录的状态（Cookie），后续执行和 MCP 调用都能直接复用。
                 </div>
             </div>
         </div>
 
-        <!-- Step 2 -->
         <div class="step">
             <div class="step-header">
                 <div class="step-number">2</div>
@@ -211,7 +266,6 @@ Connected. Perform your actions in the browser. Press Enter when done.</pre>
             </div>
         </div>
 
-        <!-- Step 3 -->
         <div class="step">
             <div class="step-header">
                 <div class="step-number">3</div>
@@ -220,9 +274,9 @@ Connected. Perform your actions in the browser. Press Enter when done.</pre>
             <div class="step-content">
                 <p>此时浏览器已经打开，执行你想要录制的操作流程：</p>
                 <ol>
-                    <li>在浏览器地址栏输入 <code>https://www.zhihu.com/hot</code> 并访问</li>
-                    <li>等待页面完全加载（看到热榜内容）</li>
-                    <li>如果需要滚动加载更多内容，可以滚动页面</li>
+                    <li>在浏览器地址栏输入目标 URL 并访问</li>
+                    <li>等待页面完全加载</li>
+                    <li>执行目标操作（点击、填写表单等）</li>
                     <li><strong>不要点击其他无关链接</strong>，避免录制过多噪声请求</li>
                 </ol>
 
@@ -232,11 +286,10 @@ Connected. Perform your actions in the browser. Press Enter when done.</pre>
             </div>
         </div>
 
-        <!-- Step 4 -->
         <div class="step">
             <div class="step-header">
                 <div class="step-number">4</div>
-                <div class="step-title">停止录制</div>
+                <div class="step-title">停止录制并精简</div>
             </div>
             <div class="step-content">
                 <p>操作完成后，回到终端窗口，<strong>按 Enter 键</strong>停止录制。</p>
@@ -244,39 +297,24 @@ Connected. Perform your actions in the browser. Press Enter when done.</pre>
                 <pre>Skill saved to ./skills/zhihu-hot.json
 Recorded 15 steps</pre>
 
-                <p>录制的 Skill 文件会保存在 <code>skills/zhihu-hot.json</code>。</p>
-            </div>
-        </div>
-
-        <!-- Step 5 -->
-        <div class="step">
-            <div class="step-header">
-                <div class="step-number">5</div>
-                <div class="step-title">精简录制的 Skill（关键步骤）</div>
-            </div>
-            <div class="step-content">
                 <p>录制会捕获所有请求，包含大量噪声（广告、统计、token 刷新等）。需要手动精简：</p>
+                <ul>
+                    <li>打开 <code>skills/xxx.json</code>，分析每个 step</li>
+                    <li>只保留获取目标数据的那个 API 请求</li>
+                    <li>添加 <code>parameters</code> 定义可参数化的变量</li>
+                    <li>添加 <code>extract</code> 用 JSONPath 提取数据</li>
+                    <li>添加 <code>output.summary</code> 执行摘要</li>
+                </ul>
 
-                <p><strong>打开录制的 JSON 文件</strong>，分析每个 step，只保留获取目标数据的那个 API 请求。</p>
-
-                <p>以知乎热榜为例，录制的 15 个 steps 中，只有一个是真正获取热榜数据的：</p>
-                <pre>{
-  "id": "step_9",
-  "method": "GET",
-  "url": "https://www.zhihu.com/api/v4/search/hot_search",
-  ...
-}</pre>
-
-                <p><strong>精简后的 Skill 结构：</strong></p>
+                <p>精简后的 Skill 示例：</p>
                 <pre>{
   "name": "zhihu-hot",
   "version": "1.0.0",
-  "description": "获取知乎热榜数据并生成 Markdown",
+  "description": "获取知乎热榜数据",
   "target_origin": "https://www.zhihu.com",
   "parameters": {
     "limit": {
       "type": "number",
-      "required": false,
       "default": 50,
       "description": "获取的热榜条目数量"
     }
@@ -300,65 +338,229 @@ Recorded 15 steps</pre>
     "extract": {
       "hotList": "$.hot_search_queries"
     }
-  },
-  "post_process": "generateMarkdown"
+  }
 }</pre>
-
-                <p><strong>需要添加的字段：</strong></p>
-                <ul>
-                    <li><code>parameters</code> — 定义可参数化的变量（如 limit）</li>
-                    <li><code>steps[].extract</code> — 用 JSONPath 从响应中提取数据</li>
-                    <li><code>output.summary</code> — 执行后的总结文案（支持 <code>{{var}}</code> 模板）</li>
-                    <li><code>output.extract</code> — 最终输出时再次提取的数据</li>
-                    <li><code>post_process</code> — 后处理器名称（如 <code>generateMarkdown</code>）</li>
-                </ul>
             </div>
         </div>
 
-        <!-- Step 6 -->
+        <!-- Step 5: Run -->
+        <div class="section-title" id="run">二、执行 Skill</div>
+
+        <div class="step">
+            <div class="step-header">
+                <div class="step-number">5</div>
+                <div class="step-title">直接执行</div>
+            </div>
+            <div class="step-content">
+                <pre>node bin/webfunc run &lt;skill-name&gt; -p "C:\temp\chrome-dev"</pre>
+
+                <p>示例输出：</p>
+                <pre>查询到 Horae 失败任务数据
+Extracted: {
+  "tasks": {
+    "headers": ["任务ID", "任务名称", "状态", ...],
+    "rows": [...]
+  }
+}</pre>
+            </div>
+        </div>
+
         <div class="step">
             <div class="step-header">
                 <div class="step-number">6</div>
-                <div class="step-title">测试执行</div>
+                <div class="step-title">交互式输入参数</div>
             </div>
             <div class="step-content">
-                <p>精简完成后，执行 Skill 测试：</p>
-                <pre>node bin/webfunc run zhihu-hot -p "C:\temp\chrome-dev"</pre>
+                <pre>node bin/webfunc run horae-failed-tasks -p "C:\temp\chrome-dev" -i</pre>
+                <p>终端会逐行提示输入缺失的参数值。</p>
+            </div>
+        </div>
 
-                <p>如果一切正常，会看到：</p>
-                <pre>Connected. Getting cookies...
-Executing skill: zhihu-hot
+        <div class="step">
+            <div class="step-header">
+                <div class="step-number">7</div>
+                <div class="step-title">自然语言参数解析</div>
+            </div>
+            <div class="step-content">
+                <pre>node bin/webfunc run horae-failed-tasks -p "C:\temp\chrome-dev" \
+  --natural "查询我名下最近失败的 Hive 任务" \
+  --api-key &lt;your-anthropic-api-key&gt;</pre>
+                <p>会自动调用 Anthropic API 从自然语言中提取参数值。</p>
+            </div>
+        </div>
 
-Step: hot_search - https://www.zhihu.com/api/v4/search/hot_search
-  Status: 200
+        <!-- Step 8: MCP -->
+        <div class="section-title" id="mcp">三、MCP Server（大模型调用）</div>
 
-Summary: 获取到 50 条知乎热榜数据
-Markdown saved to: d:\claude\webfunc\zhihu-hot-1234567890.md</pre>
+        <div class="step">
+            <div class="step-header">
+                <div class="step-number">8</div>
+                <div class="step-title">什么是 MCP Server？</div>
+            </div>
+            <div class="step-content">
+                <p>MCP（Model Context Protocol）是 Anthropic 推出的开放协议，让大模型能够调用外部工具。Webfunc 的 MCP Server 会将你的所有 Skills 自动注册为 Tools，供大模型按需调用。</p>
 
-                <div class="tip">
-                    <strong>成功！</strong> Markdown 文件已生成，包含格式化的热榜数据表格。
+                <div class="feature-box">
+                    <strong>MCP 的优势：</strong>
+                    <ul>
+                        <li><strong>通用</strong> — 支持 Claude、GPT、Gemini 等任何 MCP 客户端</li>
+                        <li><strong>零 UI 开发</strong> — 配置好路径后，对话中自动出现 tools</li>
+                        <li><strong>智能编排</strong> — 大模型根据 tool 描述自主决定调用时机和参数</li>
+                        <li><strong>本地安全</strong> — stdio 通信，不走网络，无端口暴露风险</li>
+                    </ul>
                 </div>
             </div>
         </div>
 
-        <!-- Step 7 -->
         <div class="step">
             <div class="step-header">
-                <div class="step-number">7</div>
-                <div class="step-title">常见问题排查</div>
+                <div class="step-number">9</div>
+                <div class="step-title">配置 Claude Desktop</div>
             </div>
+            <div class="step-content">
+                <p>打开 Claude Desktop 的配置文件（按 OS 路径）：</p>
+
+                <table>
+                    <tr><th>系统</th><th>配置文件路径</th></tr>
+                    <tr><td>macOS</td><td><code>~/Library/Application Support/Claude/claude_desktop_config.json</code></td></tr>
+                    <tr><td>Windows</td><td><code>%APPDATA%\Claude\claude_desktop_config.json</code></td></tr>
+                    <tr><td>Linux</td><td><code>~/.config/Claude/claude_desktop_config.json</code></td></tr>
+                </table>
+
+                <p>添加以下配置（替换为你的实际路径）：</p>
+                <pre>{
+  "mcpServers": {
+    "webfunc": {
+      "command": "node",
+      "args": [
+        "D:/claude/webfunc/bin/webfunc",
+        "mcp",
+        "-p", "C:/temp/chrome-dev"
+      ]
+    }
+  }
+}</pre>
+
+                <div class="tip">
+                    <strong>注意：</strong>Windows 路径中的反斜杠 <code>\</code> 在 JSON 中需改为正斜杠 <code>/</code> 或双反斜杠 <code>\\</code>。
+                </div>
+
+                <p>保存后<strong>重启 Claude Desktop</strong>。在对话中，右下角会出现工具图标，表示 Skills 已加载。</p>
+            </div>
+        </div>
+
+        <div class="step">
+            <div class="step-header">
+                <div class="step-number">10</div>
+                <div class="step-title">配置 Cursor</div>
+            </div>
+            <div class="step-content">
+                <p>Cursor 也支持 MCP，在设置中添加：</p>
+                <pre>Settings → MCP → Add new MCP server
+
+Name: webfunc
+Type: command
+Command: node D:/claude/webfunc/bin/webfunc mcp -p C:/temp/chrome-dev</pre>
+            </div>
+        </div>
+
+        <div class="step">
+            <div class="step-header">
+                <div class="step-number">11</div>
+                <div class="step-title">大模型使用示例</div>
+            </div>
+            <div class="step-content">
+                <p>配置完成后，在 Claude 中直接对话即可：</p>
+
+                <pre><span class="comment"># 你输入</span>
+查一下我最近失败的 Hive 任务
+
+<span class="comment"># Claude 会自动调用 horae-failed-tasks tool，参数如下：</span>
+{
+  "in_charge": "ouruibin",
+  "state": "3",
+  "last_update_start": "2026-03-19",
+  "last_update_end": "2026-04-20"
+}
+
+<span class="comment"># Claude 返回结果：</span>
+查询到 3 条失败任务：
+
+| 任务ID | 任务名称 | 状态 | 运行时长 |
+|--------|----------|------|----------|
+| 106314 | temp_n.odata... | FAILED | 02:11:44 |
+| 123233 | odata_n_uip... | FAILED | 02:11:42 |
+| 203976 | util.bak_tbl | FAILED | 00:00:52 |</pre>
+
+                <div class="tip">
+                    <strong>智能之处：</strong>大模型根据 Skill 的 <code>description</code> 和参数描述，自主理解该工具的作用，无需你手动说明参数含义。
+                </div>
+            </div>
+        </div>
+
+        <!-- Skill Format -->
+        <div class="section-title" id="format">四、Skill 格式速查</div>
+
+        <div class="step">
+            <div class="step-content">
+                <pre>{
+  "name": "skill-name",
+  "version": "1.0.0",
+  "description": "Skill 描述（MCP 中作为 tool 说明）",
+  "target_origin": "https://example.com",
+  "execution_mode": "browser",
+  "parameters": {
+    "param1": {
+      "type": "string",
+      "required": true,
+      "default": "default-value",
+      "description": "参数说明"
+    }
+  },
+  "steps": [
+    {
+      "id": "step1",
+      "method": "GET|POST|PUT|DELETE",
+      "url": "https://example.com/api/data",
+      "headers": {},
+      "body": "key={{param1}}",
+      "extract": { "data": "$.path.to.value" }
+    }
+  ],
+  "output": {
+    "summary": "获取到 {{data.length}} 条数据",
+    "extract": { "data": "$.path" }
+  },
+  "post_process": "generateMarkdown"
+}</pre>
+
+                <table>
+                    <tr><th>字段</th><th>说明</th></tr>
+                    <tr><td><code>execution_mode</code></td><td><code>http</code>（axios）或 <code>browser</code>（浏览器内 fetch，保留登录态）</td></tr>
+                    <tr><td><code>parameters</code></td><td>参数定义，type 可选 string/number/boolean</td></tr>
+                    <tr><td><code>steps[].extract</code></td><td>JSONPath 规则，提取响应数据到变量</td></tr>
+                    <tr><td><code>output.summary</code></td><td>摘要模板，支持 <code>{{param}}</code> 和 <code>{{_stepId.response.path}}</code></td></tr>
+                    <tr><td><code>post_process</code></td><td>后处理器，如 <code>generateMarkdown</code></td></tr>
+                </table>
+            </div>
+        </div>
+
+        <!-- FAQ -->
+        <div class="section-title" id="faq">五、常见问题</div>
+
+        <div class="step">
             <div class="step-content">
                 <table>
                     <tr><th>问题</th><th>原因</th><th>解决方案</th></tr>
                     <tr>
                         <td><code>CDP connection failed</code></td>
                         <td>没有启动远程调试浏览器</td>
-                        <td>添加 <code>-p</code> 参数指定 userDataDir</td>
+                        <td>添加 <code>-p</code> 参数指定 userDataDir，或先启动浏览器</td>
                     </tr>
                     <tr>
                         <td><code>401 身份未验证</code></td>
                         <td>API 需要登录态</td>
-                        <td>确保浏览器已登录，且 Cookie 有效</td>
+                        <td>确保浏览器已登录，且使用 <code>execution_mode: "browser"</code></td>
                     </tr>
                     <tr>
                         <td>提取结果为 <code>undefined</code></td>
@@ -366,46 +568,26 @@ Markdown saved to: d:\claude\webfunc\zhihu-hot-1234567890.md</pre>
                         <td>检查 API 响应结构，更新 extract 路径</td>
                     </tr>
                     <tr>
-                        <td><code>{{hotList.length}}</code> 未替换</td>
-                        <td>模板语法不支持</td>
-                        <td>确保使用 <code>{{var.path}}</code> 格式</td>
-                    </tr>
-                    <tr>
                         <td>录制了太多无用请求</td>
                         <td>页面加载了大量广告/统计</td>
                         <td>精简 steps，只保留核心 API</td>
+                    </tr>
+                    <tr>
+                        <td>MCP 工具不显示</td>
+                        <td>配置路径错误或 JSON 语法错误</td>
+                        <td>检查 <code>claude_desktop_config.json</code> 语法，路径用正斜杠</td>
+                    </tr>
+                    <tr>
+                        <td>HTML 表格未解析</td>
+                        <td>响应不是 JSON 且不是标准表格</td>
+                        <td>检查 HTML 结构，当前只支持标准 <code>&lt;table&gt;</code> 标签</td>
                     </tr>
                 </table>
             </div>
         </div>
 
-        <!-- Step 8 -->
-        <div class="step">
-            <div class="step-header">
-                <div class="step-number">8</div>
-                <div class="step-title">Skill 文件结构速查</div>
-            </div>
-            <div class="step-content">
-                <div class="file-tree">
-<span class="dir">webfunc/</span>
-├── <span class="dir">skills/</span>               <span class="comment"># Skill 文件存放目录</span>
-│   ├── <span class="file">zhihu-hot.json</span>      <span class="comment"># 知乎热榜 Skill</span>
-│   └── <span class="file">your-skill.json</span>     <span class="comment"># 你录制的其他 Skill</span>
-├── <span class="dir">src/</span>
-│   ├── <span class="dir">core/</span>
-│   │   ├── <span class="file">recorder.ts</span>       <span class="comment"># 录制逻辑</span>
-│   │   ├── <span class="file">executor.ts</span>       <span class="comment"># 执行逻辑</span>
-│   │   └── <span class="file">post-processors.ts</span> <span class="comment"># 后处理器</span>
-│   └── <span class="dir">cli/</span>
-│       ├── <span class="file">record.ts</span>         <span class="comment"># record 命令</span>
-│       └── <span class="file">run.ts</span>            <span class="comment"># run 命令</span>
-└── <span class="file">bin/webfunc</span>             <span class="comment"># CLI 入口</span>
-                </div>
-            </div>
-        </div>
-
         <div style="text-align: center; padding: 30px 0; color: #999; font-size: 13px;">
-            Webfunc v0.1.0 | 录制于 2026-04-19
+            Webfunc v0.1.0 | 最后更新 2026-04-19
         </div>
     </div>
 </body>

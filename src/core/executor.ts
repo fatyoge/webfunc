@@ -158,8 +158,16 @@ export class SkillExecutor {
           if (bestTable && bestRows > 1) {
             const headers = Array.from(bestTable.querySelectorAll('th')).map((h) => h.textContent?.trim() || '');
             const rows = Array.from(bestTable.querySelectorAll('tr')).slice(1).map((row) => {
-              const cells = Array.from(row.querySelectorAll('td')).map((c) => c.textContent?.trim() || '');
-              const obj: Record<string, string> = {};
+              const cells = Array.from(row.querySelectorAll('td')).map((c) => {
+                const text = c.textContent?.trim() || '';
+                const links = Array.from(c.querySelectorAll('a')).map((a) => ({
+                  text: a.textContent?.trim() || '',
+                  href: a.getAttribute('href') || '',
+                  onclick: a.getAttribute('onclick') || '',
+                }));
+                return links.length > 0 ? { text, links } : text;
+              });
+              const obj: Record<string, unknown> = {};
               cells.forEach((cell, i) => {
                 obj[headers[i] || `col${i}`] = cell;
               });

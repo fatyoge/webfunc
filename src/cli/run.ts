@@ -7,12 +7,23 @@ import { Skill } from '../types/skill';
 import fs from 'fs/promises';
 import path from 'path';
 
+function parseParam(value: string, previous: Record<string, string> = {}) {
+  const eqIndex = value.indexOf('=');
+  if (eqIndex === -1) {
+    throw new Error(`Invalid parameter format: "${value}". Expected "key=value".`);
+  }
+  const key = value.slice(0, eqIndex);
+  const val = value.slice(eqIndex + 1);
+  return { ...previous, [key]: val };
+}
+
 export function createRunCommand(): Command {
   return new Command('run')
     .description('Execute a recorded Skill')
     .argument('<skill-name>', 'Name of the Skill to run')
     .option('-d, --dir <directory>', 'Skills directory', './skills')
     .option('-p, --profile <profile>', 'Browser user data directory')
+    .option('-P, --param <param>', 'Parameter in key=value format (can be used multiple times)', parseParam, {})
     .option('-i, --interactive', 'Interactively prompt for missing parameters')
     .option('--natural <prompt>', 'Natural language prompt to extract parameters')
     .option('--api-key <key>', 'Anthropic API key for natural language parsing')
@@ -28,6 +39,11 @@ export function createRunCommand(): Command {
         if (param.default !== undefined) {
           params[key] = param.default;
         }
+      }
+
+      // Apply command-line parameters
+      if (options.param && Object.keys(options.param).length > 0) {
+        Object.assign(params, options.param);
       }
 
       if (options.natural && options.apiKey) {
