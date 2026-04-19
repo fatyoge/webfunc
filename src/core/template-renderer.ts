@@ -21,7 +21,7 @@ function getValueByPath(obj: unknown, path: string): unknown {
 export function renderTemplate(template: string, values: Record<string, unknown>): string {
   return template.replace(/\{\{([\w.\[\]]+)\}\}/g, (_match, key) => {
     const value = getValueByPath(values, key);
-    return value !== undefined ? String(value) : `{{${key}}}`;
+    return value !== undefined ? String(value) : '';
   });
 }
 

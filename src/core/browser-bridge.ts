@@ -13,8 +13,8 @@ export class BrowserBridge {
 
   constructor(options: BrowserBridgeOptions = {}) {
     this.options = {
-      cdpEndpoint: 'ws://localhost:9222',
-      userDataDir: undefined,
+      cdpEndpoint: options.cdpEndpoint || process.env.WEBFUNC_CDP || 'http://127.0.0.1:9222',
+      userDataDir: options.userDataDir,
       headless: false,
       ...options,
     };
@@ -51,5 +51,16 @@ export class BrowserBridge {
 
   getContext(): BrowserContext | null {
     return this.context;
+  }
+
+  async getPage(): Promise<import('playwright').Page> {
+    if (!this.context) {
+      throw new Error('Browser context not connected');
+    }
+    const pages = this.context.pages();
+    if (pages.length > 0) {
+      return pages[0];
+    }
+    return await this.context.newPage();
   }
 }

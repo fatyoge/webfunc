@@ -31,12 +31,14 @@ export interface Skill {
   steps: SkillStep[];
   output: SkillOutput;
   post_process?: string;
+  execution_mode?: 'http' | 'browser';
 }
 
 export interface ExecutionContext {
   params: Record<string, unknown>;
   stepResults: Record<string, { response: unknown; status: number }>;
   cookies: string;
+  page?: import('playwright').Page;
 }
 
 export interface ExecutionResult {

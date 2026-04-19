@@ -23,10 +23,18 @@ export function createRunCommand(): Command {
 
       let params: Record<string, unknown> = {};
 
+      // Fill defaults first
+      for (const [key, param] of Object.entries(skill.parameters)) {
+        if (param.default !== undefined) {
+          params[key] = param.default;
+        }
+      }
+
       if (options.natural && options.apiKey) {
         const parser = new LLMParser({ apiKey: options.apiKey });
-        params = await parser.parse(options.natural, skill);
-        console.log('Parsed parameters:', params);
+        const parsed = await parser.parse(options.natural, skill);
+        Object.assign(params, parsed);
+        console.log('Parsed parameters:', parsed);
       }
 
       if (options.interactive) {
@@ -47,15 +55,28 @@ export function createRunCommand(): Command {
 
       const bridge = new BrowserBridge({ userDataDir: options.profile });
       const context = await bridge.connect();
-      const cookieStore = new CookieStore(context);
-      const cookies = await cookieStore.getCookiesForUrl(skill.target_origin);
 
       const executor = new SkillExecutor();
-      const result = await executor.run(skill, {
-        params,
-        stepResults: {},
-        cookies,
-      });
+
+      let result: import('../types/skill').ExecutionResult;
+
+      if (skill.execution_mode === 'browser') {
+        const page = await bridge.getPage();
+        result = await executor.run(skill, {
+          params,
+          stepResults: {},
+          cookies: '',
+          page,
+        });
+      } else {
+        const cookieStore = new CookieStore(context);
+        const cookies = await cookieStore.getCookiesForUrl(skill.target_origin);
+        result = await executor.run(skill, {
+          params,
+          stepResults: {},
+          cookies,
+        });
+      }
 
       if (result.success) {
         console.log('\n✅', result.summary);

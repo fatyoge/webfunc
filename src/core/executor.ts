@@ -1,6 +1,6 @@
 import axios from 'axios';
 import { JSONPath } from 'jsonpath-plus';
-import { Skill, ExecutionContext, ExecutionResult } from '../types/skill';
+import { Skill, ExecutionContext, ExecutionResult, SkillStep } from '../types/skill';
 import { renderSkillStep } from './template-renderer';
 import { getPostProcessor } from './post-processors';
 
@@ -8,6 +8,8 @@ export class SkillExecutor {
   async run(skill: Skill, context: ExecutionContext): Promise<ExecutionResult> {
     const stepResults: ExecutionContext['stepResults'] = {};
     const extractedValues: Record<string, unknown> = {};
+
+    const mode = skill.execution_mode || 'http';
 
     for (const step of skill.steps) {
       const renderContext: ExecutionContext = {
@@ -18,16 +20,10 @@ export class SkillExecutor {
       const renderedStep = renderSkillStep(step, renderContext);
 
       try {
-        const response = await axios.request({
-          method: renderedStep.method,
-          url: renderedStep.url,
-          headers: {
-            ...renderedStep.headers,
-            Cookie: context.cookies,
-          },
-          data: renderedStep.body,
-          params: renderedStep.query,
-        });
+        const response =
+          mode === 'browser' && context.page
+            ? await this.runBrowserStep(renderedStep, context.page)
+            : await this.runHttpStep(renderedStep, context.cookies);
 
         if (step.assert) {
           const assertError = this.validateAssertion(response.status, response.data, step.assert);
@@ -95,6 +91,93 @@ export class SkillExecutor {
     }
 
     return result;
+  }
+
+  private async runHttpStep(
+    step: SkillStep,
+    cookies: string
+  ): Promise<{ status: number; data: unknown }> {
+    const response = await axios.request({
+      method: step.method,
+      url: step.url,
+      headers: {
+        ...step.headers,
+        Cookie: cookies,
+      },
+      data: step.body,
+      params: step.query,
+    });
+
+    return { status: response.status, data: response.data };
+  }
+
+  private async runBrowserStep(
+    step: SkillStep,
+    page: import('playwright').Page
+  ): Promise<{ status: number; data: unknown }> {
+    const fetchArgs = {
+      url: step.url,
+      method: step.method,
+      headers: step.headers || {},
+      body: typeof step.body === 'string' ? step.body : step.body ? JSON.stringify(step.body) : null,
+    };
+
+    const result = await page.evaluate(async (args) => {
+      const options: RequestInit = {
+        method: args.method,
+        headers: args.headers,
+        credentials: 'include',
+      };
+      if (args.body && args.method !== 'GET') {
+        options.body = args.body;
+      }
+
+      const res = await fetch(args.url, options);
+      const text = await res.text();
+
+      // Try to parse as JSON
+      let data: unknown = text;
+      try {
+        data = JSON.parse(text);
+      } catch {
+        // Not JSON — try to extract table data from HTML
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(text, 'text/html');
+        const tables = Array.from(doc.querySelectorAll('table'));
+        if (tables.length > 0) {
+          // Find the largest table (likely the data table)
+          let bestTable: HTMLTableElement | null = null;
+          let bestRows = 0;
+          for (const t of tables) {
+            const rows = t.querySelectorAll('tr').length;
+            if (rows > bestRows) {
+              bestRows = rows;
+              bestTable = t;
+            }
+          }
+          if (bestTable && bestRows > 1) {
+            const headers = Array.from(bestTable.querySelectorAll('th')).map((h) => h.textContent?.trim() || '');
+            const rows = Array.from(bestTable.querySelectorAll('tr')).slice(1).map((row) => {
+              const cells = Array.from(row.querySelectorAll('td')).map((c) => c.textContent?.trim() || '');
+              const obj: Record<string, string> = {};
+              cells.forEach((cell, i) => {
+                obj[headers[i] || `col${i}`] = cell;
+              });
+              return obj;
+            });
+            data = { headers, rows };
+          }
+        }
+      }
+
+      return {
+        status: res.status,
+        data,
+        contentType: res.headers.get('content-type') || '',
+      };
+    }, fetchArgs);
+
+    return { status: result.status, data: result.data };
   }
 
   private validateAssertion(status: number, data: unknown, assert: Record<string, unknown>): string | null {
