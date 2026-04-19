@@ -38,3 +38,10 @@ export interface ExecutionContext {
   stepResults: Record<string, { response: unknown; status: number }>;
   cookies: string;
 }
+
+export interface ExecutionResult {
+  success: boolean;
+  summary: string;
+  extracted: Record<string, unknown>;
+  error?: string;
+}

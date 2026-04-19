@@ -1,14 +1,8 @@
 import axios from 'axios';
 import { JSONPath } from 'jsonpath-plus';
-import { Skill, ExecutionContext, SkillStep } from '../types/skill';
+import { Skill, ExecutionContext, ExecutionResult } from '../types/skill';
 import { renderSkillStep } from './template-renderer';
-
-export interface ExecutionResult {
-  success: boolean;
-  summary: string;
-  extracted: Record<string, unknown>;
-  error?: string;
-}
+import { getPostProcessor } from './post-processors';
 
 export class SkillExecutor {
   async run(skill: Skill, context: ExecutionContext): Promise<ExecutionResult> {
@@ -87,11 +81,20 @@ export class SkillExecutor {
       }
     }
 
-    return {
+    let result: ExecutionResult = {
       success: true,
       summary: renderedOutput.url,
       extracted,
     };
+
+    if (skill.post_process) {
+      const processor = getPostProcessor(skill.post_process);
+      if (processor) {
+        result = await processor(result, skill);
+      }
+    }
+
+    return result;
   }
 
   private validateAssertion(status: number, data: unknown, assert: Record<string, unknown>): string | null {

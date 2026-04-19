@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node -e \"const {JSONPath} = require\\('jsonpath-plus'\\); console.log\\(typeof JSONPath\\); console.log\\(JSONPath\\({path: '$.a', json: {a: 1}}\\)\\);\")",
+      "Bash(node -e \"const jp = require\\('jsonpath-plus'\\); console.log\\(Object.keys\\(jp\\)\\);\")",
+      "Bash(node -e \"const {chromium} = require\\('playwright'\\); console.log\\(typeof chromium.connectOverCDP\\); console.log\\(chromium.connectOverCDP.toString\\(\\).slice\\(0,200\\)\\);\")",
+      "Read(//c/Program Files/Google/Chrome/Application/**)",
+      "Read(//c/Program Files \\(x86\\)/Google/Chrome/Application/**)",
+      "Bash(node bin/webfunc run zhihu-hot)",
+      "Bash(node bin/webfunc run zhihu-hot -p \"C:\\\\temp\\\\chrome-dev\")",
+      "Bash(node -e ' *)"
+    ]
+  }
+}

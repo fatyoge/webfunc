@@ -1,12 +1,5 @@
 import { SkillStep, ExecutionContext } from '../types/skill';
 
-export function renderTemplate(template: string, values: Record<string, unknown>): string {
-  return template.replace(/\{\{(\w+)\}\}/g, (_match, key) => {
-    const value = values[key];
-    return value !== undefined ? String(value) : `{{${key}}}`;
-  });
-}
-
 function getValueByPath(obj: unknown, path: string): unknown {
   const parts = path.split('.');
   let current: unknown = obj;
@@ -23,6 +16,13 @@ function getValueByPath(obj: unknown, path: string): unknown {
     }
   }
   return current;
+}
+
+export function renderTemplate(template: string, values: Record<string, unknown>): string {
+  return template.replace(/\{\{([\w.\[\]]+)\}\}/g, (_match, key) => {
+    const value = getValueByPath(values, key);
+    return value !== undefined ? String(value) : `{{${key}}}`;
+  });
 }
 
 export function renderSkillStep(step: SkillStep, context: ExecutionContext): SkillStep {
