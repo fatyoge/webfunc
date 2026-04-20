@@ -1,4 +1,5 @@
 import path from 'path';
+import fs from 'fs/promises';
 
 export interface ParsedSource {
   type: 'git' | 'local';
@@ -51,4 +52,48 @@ export function parseSource(source: string): ParsedSource {
   }
 
   return { type: 'git', repo: repoUrl, branch, path: subPath };
+}
+
+export interface InstallOptions {
+  force?: boolean;
+}
+
+export async function installSkill(
+  sourcePath: string,
+  targetDir: string,
+  options: InstallOptions = {}
+): Promise<void> {
+  const skillJsonPath = path.join(sourcePath, 'skill.json');
+  const content = await fs.readFile(skillJsonPath, 'utf-8');
+  const skill = JSON.parse(content);
+  const skillName = skill.name || path.basename(sourcePath);
+
+  const targetPath = path.join(targetDir, skillName);
+
+  const exists = await fs.stat(targetPath).catch(() => null);
+  if (exists && !options.force) {
+    console.log(`Skill "${skillName}" already exists, skipping (use --force to overwrite)`);
+    return;
+  }
+
+  await fs.mkdir(targetPath, { recursive: true });
+
+  const entries = await fs.readdir(sourcePath, { withFileTypes: true });
+  for (const entry of entries) {
+    const src = path.join(sourcePath, entry.name);
+    const dest = path.join(targetPath, entry.name);
+    if (entry.isDirectory()) {
+      await fs.mkdir(dest, { recursive: true });
+      const subEntries = await fs.readdir(src, { withFileTypes: true });
+      for (const sub of subEntries) {
+        if (sub.isFile()) {
+          await fs.copyFile(path.join(src, sub.name), path.join(dest, sub.name));
+        }
+      }
+    } else {
+      await fs.copyFile(src, dest);
+    }
+  }
+
+  console.log(`Installed skill "${skillName}" to ${targetPath}`);
 }
