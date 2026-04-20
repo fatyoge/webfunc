@@ -18,4 +18,10 @@ describe('CLI', () => {
     expect(mod).toBeDefined();
     expect(mod.createListCommand).toBeDefined();
   });
+
+  it('install command module loads', async () => {
+    const mod = await import('../../src/cli/install');
+    expect(mod).toBeDefined();
+    expect(mod.createInstallCommand).toBeDefined();
+  });
 });
