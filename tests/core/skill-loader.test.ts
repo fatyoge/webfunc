@@ -85,7 +85,7 @@ describe('loadSkill', () => {
     await fs.mkdir(skillDir, { recursive: true });
     await fs.writeFile(path.join(skillDir, 'skill.json'), 'not json');
 
-    await expect(loadSkill('bad-skill', tempDir)).rejects.toThrow(SyntaxError);
+    await expect(loadSkill('bad-skill', tempDir)).rejects.toThrow('Invalid JSON in');
   });
 });
 

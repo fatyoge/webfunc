@@ -10,7 +10,11 @@ export async function loadSkill(name: string, dir: string): Promise<Skill> {
   const dirPath = path.join(dir, name, 'skill.json');
   try {
     const content = await fs.readFile(dirPath, 'utf-8');
-    return JSON.parse(content) as Skill;
+    try {
+      return JSON.parse(content) as Skill;
+    } catch (parseErr: any) {
+      throw new Error(`Invalid JSON in ${dirPath}: ${parseErr.message}`);
+    }
   } catch (err) {
     if (!isEnoent(err)) throw err;
   }
@@ -18,7 +22,11 @@ export async function loadSkill(name: string, dir: string): Promise<Skill> {
   const filePath = path.join(dir, `${name}.json`);
   try {
     const content = await fs.readFile(filePath, 'utf-8');
-    return JSON.parse(content) as Skill;
+    try {
+      return JSON.parse(content) as Skill;
+    } catch (parseErr: any) {
+      throw new Error(`Invalid JSON in ${filePath}: ${parseErr.message}`);
+    }
   } catch (err) {
     if (!isEnoent(err)) throw err;
     throw new Error(`Skill "${name}" not found in ${dir}`);

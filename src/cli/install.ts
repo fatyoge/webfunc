@@ -1,5 +1,8 @@
 import path from 'path';
 import fs from 'fs/promises';
+import { spawn } from 'child_process';
+import os from 'os';
+import { Command } from 'commander';
 
 export interface ParsedSource {
   type: 'git' | 'local';
@@ -83,13 +86,7 @@ export async function installSkill(
     const src = path.join(sourcePath, entry.name);
     const dest = path.join(targetPath, entry.name);
     if (entry.isDirectory()) {
-      await fs.mkdir(dest, { recursive: true });
-      const subEntries = await fs.readdir(src, { withFileTypes: true });
-      for (const sub of subEntries) {
-        if (sub.isFile()) {
-          await fs.copyFile(path.join(src, sub.name), path.join(dest, sub.name));
-        }
-      }
+      await fs.cp(src, dest, { recursive: true });
     } else {
       await fs.copyFile(src, dest);
     }
@@ -97,10 +94,6 @@ export async function installSkill(
 
   console.log(`Installed skill "${skillName}" to ${targetPath}`);
 }
-
-import { spawn } from 'child_process';
-import os from 'os';
-import { Command } from 'commander';
 
 async function execGit(args: string[], cwd?: string): Promise<string> {
   return new Promise((resolve, reject) => {
