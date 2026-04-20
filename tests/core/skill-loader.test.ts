@@ -79,4 +79,12 @@ describe('loadSkill', () => {
       'Skill "nonexistent" not found in ' + tempDir
     );
   });
+
+  it('throws on malformed JSON in directory format', async () => {
+    const skillDir = path.join(tempDir, 'bad-skill');
+    await fs.mkdir(skillDir, { recursive: true });
+    await fs.writeFile(path.join(skillDir, 'skill.json'), 'not json');
+
+    await expect(loadSkill('bad-skill', tempDir)).rejects.toThrow(SyntaxError);
+  });
 });
