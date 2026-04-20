@@ -4,6 +4,7 @@ import { createRecordCommand } from './record';
 import { createRunCommand } from './run';
 import { createListCommand } from './list';
 import { createMcpCommand } from './mcp';
+import { createInstallCommand } from './install';
 
 const program = new Command();
 
@@ -16,5 +17,6 @@ program.addCommand(createRecordCommand());
 program.addCommand(createRunCommand());
 program.addCommand(createListCommand());
 program.addCommand(createMcpCommand());
+program.addCommand(createInstallCommand());
 
 program.parse();

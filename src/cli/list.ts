@@ -1,29 +1,22 @@
 import { Command } from 'commander';
-import fs from 'fs/promises';
-import path from 'path';
+import { listSkills, loadSkill } from '../core/skill-loader';
 
 export function createListCommand(): Command {
   const list = new Command('list')
     .description('List all recorded Skills')
     .option('-d, --dir <directory>', 'Skills directory', './skills')
     .action(async (options) => {
-      try {
-        const files = await fs.readdir(options.dir);
-        const skills = files.filter((f) => f.endsWith('.json'));
+      const skills = await listSkills(options.dir);
 
-        if (skills.length === 0) {
-          console.log('No skills found.');
-          return;
-        }
-
-        console.log('\nRecorded Skills:');
-        for (const file of skills) {
-          const data = await fs.readFile(path.join(options.dir, file), 'utf-8');
-          const skill = JSON.parse(data);
-          console.log(`  - ${skill.name}: ${skill.description || 'No description'} (${skill.steps.length} steps)`);
-        }
-      } catch {
+      if (skills.length === 0) {
         console.log('No skills found.');
+        return;
+      }
+
+      console.log('\nRecorded Skills:');
+      for (const { name, skill } of skills) {
+        const stepCount = skill.steps?.length || 0;
+        console.log(`  - ${name}: ${skill.description || 'No description'} (${stepCount} steps)`);
       }
     });
 
@@ -32,9 +25,7 @@ export function createListCommand(): Command {
     .argument('<skill-name>', 'Name of the Skill')
     .option('-d, --dir <directory>', 'Skills directory', './skills')
     .action(async (skillName, options) => {
-      const skillPath = path.join(options.dir, `${skillName}.json`);
-      const data = await fs.readFile(skillPath, 'utf-8');
-      const skill = JSON.parse(data);
+      const skill = await loadSkill(skillName, options.dir);
       console.log(JSON.stringify(skill, null, 2));
     });
 
