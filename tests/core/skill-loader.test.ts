@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import fs from 'fs/promises';
 import path from 'path';
 import os from 'os';
@@ -86,5 +86,74 @@ describe('loadSkill', () => {
     await fs.writeFile(path.join(skillDir, 'skill.json'), 'not json');
 
     await expect(loadSkill('bad-skill', tempDir)).rejects.toThrow(SyntaxError);
+  });
+});
+
+describe('listSkills', () => {
+  let tmpDir: string;
+
+  beforeEach(async () => {
+    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'webfunc-list-'));
+  });
+
+  afterEach(async () => {
+    await fs.rm(tmpDir, { recursive: true, force: true });
+  });
+
+  it('lists skills from directory format', async () => {
+    const skillDir = path.join(tmpDir, 'zhihu-hot');
+    await fs.mkdir(skillDir, { recursive: true });
+    await fs.writeFile(
+      path.join(skillDir, 'skill.json'),
+      JSON.stringify({ name: 'zhihu-hot', version: '1.0.0', description: 'Hot list' })
+    );
+
+    const { listSkills } = await import('../../src/core/skill-loader');
+    const skills = await listSkills(tmpDir);
+    expect(skills).toHaveLength(1);
+    expect(skills[0].name).toBe('zhihu-hot');
+    expect(skills[0].skill.description).toBe('Hot list');
+  });
+
+  it('lists skills from file format', async () => {
+    await fs.writeFile(
+      path.join(tmpDir, 'horae.json'),
+      JSON.stringify({ name: 'horae', version: '1.0.0', description: 'Horae tasks' })
+    );
+
+    const { listSkills } = await import('../../src/core/skill-loader');
+    const skills = await listSkills(tmpDir);
+    expect(skills).toHaveLength(1);
+    expect(skills[0].name).toBe('horae');
+  });
+
+  it('prefers directory over file when both exist', async () => {
+    const skillDir = path.join(tmpDir, 'both');
+    await fs.mkdir(skillDir, { recursive: true });
+    await fs.writeFile(
+      path.join(skillDir, 'skill.json'),
+      JSON.stringify({ name: 'both', version: '2.0.0', description: 'Dir' })
+    );
+    await fs.writeFile(
+      path.join(tmpDir, 'both.json'),
+      JSON.stringify({ name: 'both', version: '1.0.0', description: 'File' })
+    );
+
+    const { listSkills } = await import('../../src/core/skill-loader');
+    const skills = await listSkills(tmpDir);
+    expect(skills).toHaveLength(1);
+    expect(skills[0].skill.version).toBe('2.0.0');
+  });
+
+  it('returns empty array when no skills found', async () => {
+    const { listSkills } = await import('../../src/core/skill-loader');
+    const skills = await listSkills(tmpDir);
+    expect(skills).toHaveLength(0);
+  });
+
+  it('returns empty array when dir does not exist', async () => {
+    const { listSkills } = await import('../../src/core/skill-loader');
+    const skills = await listSkills(path.join(tmpDir, 'nonexistent'));
+    expect(skills).toHaveLength(0);
   });
 });
