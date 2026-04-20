@@ -4,7 +4,7 @@ import { BrowserBridge } from '../core/browser-bridge';
 import { CookieStore } from '../core/cookie-store';
 import { LLMParser } from '../llm/parser';
 import { Skill } from '../types/skill';
-import fs from 'fs/promises';
+import { loadSkill } from '../core/skill-loader';
 import path from 'path';
 
 function parseParam(value: string, previous: Record<string, string> = {}) {
@@ -28,9 +28,7 @@ export function createRunCommand(): Command {
     .option('--natural <prompt>', 'Natural language prompt to extract parameters')
     .option('--api-key <key>', 'Anthropic API key for natural language parsing')
     .action(async (skillName, options) => {
-      const skillPath = path.join(options.dir, `${skillName}.json`);
-      const skillData = await fs.readFile(skillPath, 'utf-8');
-      const skill: Skill = JSON.parse(skillData);
+      const skill = await loadSkill(skillName, options.dir);
 
       let params: Record<string, unknown> = {};
 
