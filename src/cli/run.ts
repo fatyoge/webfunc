@@ -1,11 +1,9 @@
 import { Command } from 'commander';
 import { SkillExecutor } from '../core/executor';
+import { SkillLoader } from '../core/skill-loader';
 import { BrowserBridge } from '../core/browser-bridge';
 import { CookieStore } from '../core/cookie-store';
 import { LLMParser } from '../llm/parser';
-import { Skill } from '../types/skill';
-import fs from 'fs/promises';
-import path from 'path';
 
 function parseParam(value: string, previous: Record<string, string> = {}) {
   const eqIndex = value.indexOf('=');
@@ -28,14 +26,14 @@ export function createRunCommand(): Command {
     .option('--natural <prompt>', 'Natural language prompt to extract parameters')
     .option('--api-key <key>', 'Anthropic API key for natural language parsing')
     .action(async (skillName, options) => {
-      const skillPath = path.join(options.dir, `${skillName}.json`);
-      const skillData = await fs.readFile(skillPath, 'utf-8');
-      const skill: Skill = JSON.parse(skillData);
+      const loader = new SkillLoader({ localDir: options.dir });
+      const loaded = await loader.load(skillName);
+      const skill = loaded.skill;
 
       let params: Record<string, unknown> = {};
 
       // Fill defaults first
-      for (const [key, param] of Object.entries(skill.parameters)) {
+      for (const [key, param] of Object.entries(skill.parameters || {})) {
         if (param.default !== undefined) {
           params[key] = param.default;
         }
@@ -55,7 +53,7 @@ export function createRunCommand(): Command {
 
       if (options.interactive) {
         const inquirer = (await import('inquirer')).default;
-        for (const [key, param] of Object.entries(skill.parameters)) {
+        for (const [key, param] of Object.entries(skill.parameters || {})) {
           if (params[key] !== undefined) continue;
           const answer = await inquirer.prompt([
             {
@@ -78,7 +76,7 @@ export function createRunCommand(): Command {
 
       if (skill.execution_mode === 'browser') {
         const page = await bridge.getPage();
-        result = await executor.run(skill, {
+        result = await executor.run(loaded, {
           params,
           stepResults: {},
           cookies: '',
@@ -87,7 +85,7 @@ export function createRunCommand(): Command {
       } else {
         const cookieStore = new CookieStore(context);
         const cookies = await cookieStore.getCookiesForUrl(skill.target_origin);
-        result = await executor.run(skill, {
+        result = await executor.run(loaded, {
           params,
           stepResults: {},
           cookies,

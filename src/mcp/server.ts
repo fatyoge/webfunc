@@ -5,12 +5,11 @@ import {
   ListToolsRequestSchema,
   type Tool,
 } from '@modelcontextprotocol/sdk/types.js';
-import fs from 'fs/promises';
-import path from 'path';
+import { SkillLoader } from '../core/skill-loader.js';
 import { SkillExecutor } from '../core/executor.js';
 import { BrowserBridge } from '../core/browser-bridge.js';
 import { CookieStore } from '../core/cookie-store.js';
-import type { Skill, SkillParameter } from '../types/skill.js';
+import type { SkillParameter } from '../types/skill.js';
 
 export interface McpServerOptions {
   skillsDir: string;
@@ -27,28 +26,14 @@ function parameterToJsonSchema(param: SkillParameter): Record<string, object | s
 }
 
 export async function startMcpServer(options: McpServerOptions): Promise<void> {
-  // Load skills
-  const files = await fs.readdir(options.skillsDir).catch(() => [] as string[]);
-  const skillFiles = files.filter((f) => f.endsWith('.json'));
-
-  const skills: Map<string, Skill> = new Map();
-  for (const file of skillFiles) {
-    const content = await fs.readFile(path.join(options.skillsDir, file), 'utf-8');
-    let skill: Skill;
-    try {
-      skill = JSON.parse(content);
-    } catch {
-      continue;
-    }
-    if (!skill?.name || !Array.isArray(skill.steps)) {
-      continue;
-    }
-    skills.set(skill.name, skill);
-  }
+  // Load skills via SkillLoader
+  const loader = new SkillLoader({ localDir: options.skillsDir });
+  const loadedSkills = await loader.list();
 
   // Build tool list
   const tools: Tool[] = [];
-  for (const skill of skills.values()) {
+  for (const loaded of loadedSkills) {
+    const skill = loaded.skill;
     const properties: Record<string, object> = {};
     const required: string[] = [];
 
@@ -89,13 +74,18 @@ export async function startMcpServer(options: McpServerOptions): Promise<void> {
 
   server.setRequestHandler(CallToolRequestSchema, async (request) => {
     const { name, arguments: args } = request.params;
-    const skill = skills.get(name);
-    if (!skill) {
+
+    let loaded;
+    try {
+      loaded = await loader.load(name);
+    } catch {
       return {
         content: [{ type: 'text', text: `Skill "${name}" not found` }],
         isError: true,
       };
     }
+
+    const skill = loaded.skill;
 
     // Fill defaults
     const params: Record<string, unknown> = {};
@@ -123,7 +113,7 @@ export async function startMcpServer(options: McpServerOptions): Promise<void> {
       if (skill.execution_mode === 'browser') {
         const b = await ensureBridge();
         const page = await b.getPage();
-        result = await executor.run(skill, {
+        result = await executor.run(loaded, {
           params,
           stepResults: {},
           cookies: '',
@@ -136,7 +126,7 @@ export async function startMcpServer(options: McpServerOptions): Promise<void> {
         }
         const cookieStore = new CookieStore(bridgeContext);
         const cookies = await cookieStore.getCookiesForUrl(skill.target_origin);
-        result = await executor.run(skill, {
+        result = await executor.run(loaded, {
           params,
           stepResults: {},
           cookies,
