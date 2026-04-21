@@ -1,0 +1,34 @@
+{
+  "name": "zhihu-hot",
+  "version": "1.0.0",
+  "description": "获取知乎搜索热榜数据并生成 Markdown",
+  "target_origin": "https://www.zhihu.com",
+  "parameters": {
+    "limit": {
+      "type": "number",
+      "required": false,
+      "default": 50,
+      "description": "获取的热榜条目数量"
+    }
+  },
+  "steps": [
+    {
+      "id": "hot_search",
+      "method": "GET",
+      "url": "https://www.zhihu.com/api/v4/search/hot_search",
+      "headers": {
+        "x-requested-with": "fetch",
+        "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+      },
+      "extract": {
+        "hotList": "$.hot_search_queries"
+      }
+    }
+  ],
+  "output": {
+    "summary": "获取到 {{hotList.length}} 条知乎热榜数据",
+    "extract": {
+      "hotList": "$.hot_search_queries"
+    }
+  }
+}

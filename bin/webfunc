@@ -1,2 +1,3 @@
 #!/usr/bin/env node
+require('tsx/cjs/api').register();
 require('../dist/cli/index.js');

@@ -187,6 +187,14 @@ export class SkillLoader {
     for (const candidate of candidates) {
       try {
         await fs.access(candidate);
+        if (candidate.endsWith('.ts')) {
+          // 在 CJS 环境中使用 require 加载 TS 文件（需 tsx 支持）
+          // require 的相对路径基于当前文件，所以转为绝对路径
+          const req = eval('require') as NodeRequire;
+          const absCandidate = path.resolve(candidate);
+          const mod = req(absCandidate);
+          return (mod.default || mod) as SkillModule;
+        }
         const mod = await import(pathToFileURL(candidate).href);
         return (mod.default || mod) as SkillModule;
       } catch {
