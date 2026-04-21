@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "webfunc": {
+      "command": "node",
+      "args": [
+        "D:/claude/webfunc/bin/webfunc",
+        "mcp",
+        "-p",
+        "C:/temp/chrome-dev"
+      ]
+    }
+  }
+}

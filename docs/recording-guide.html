@@ -174,6 +174,7 @@
         <div class="nav">
             <a href="#record">录制 Skill</a>
             <a href="#run">执行 Skill</a>
+            <a href="#package">打包分享</a>
             <a href="#mcp">MCP Server</a>
             <a href="#format">Skill 格式</a>
             <a href="#faq">常见问题</a>
@@ -184,8 +185,10 @@
         <div class="step">
             <div class="step-content">
                 <ul>
-                    <li><strong>录制 (record)</strong> — 通过 CDP 拦截浏览器请求，将操作录制为 Skill JSON</li>
+                    <li><strong>录制 (record)</strong> — 通过 CDP 拦截浏览器请求，将操作录制为 Skill</li>
                     <li><strong>执行 (run)</strong> — 复现录制的 HTTP 流程，支持参数注入和数据提取</li>
+                    <li><strong>Skill 包 (package)</strong> — 自包含目录，支持自定义后置处理逻辑（TypeScript）</li>
+                    <li><strong>Registry 管理</strong> — 批量管理团队 Skill 集合，一键安装全部</li>
                     <li><strong>浏览器模式</strong> — 在已登录浏览器内执行 fetch，自动维持 session</li>
                     <li><strong>HTML 解析</strong> — 自动将 HTML 表格响应解析为结构化数据</li>
                     <li><strong>MCP Server</strong> — 将 Skills 注册为 MCP Tools，供 Claude/GPT/Cursor 等大模型调用</li>
@@ -389,12 +392,171 @@ Extracted: {
             </div>
         </div>
 
-        <!-- Step 8: MCP -->
-        <div class="section-title" id="mcp">三、MCP Server（大模型调用）</div>
+        <!-- 打包与分享 -->
+        <div class="section-title" id="package">三、打包与分享 Skill</div>
 
         <div class="step">
             <div class="step-header">
                 <div class="step-number">8</div>
+                <div class="step-title">将纯 JSON 升级为 Skill 包</div>
+            </div>
+            <div class="step-content">
+                <p>录制生成的 <code>.json</code> 是纯配置，无法自定义处理逻辑。升级为<strong>包格式</strong>后，每个 Skill 是一个自包含目录：</p>
+
+                <div class="file-tree">
+<span class="dir">skill-zhihu-hot/</span>
+├── <span class="file">skill.json</span>          <span class="comment"># 元信息、参数定义、HTTP steps</span>
+├── <span class="file">index.ts</span>            <span class="comment"># 自定义执行逻辑（可选）</span>
+├── <span class="dir">assets/</span>             <span class="comment"># 模板文件等（可选）</span>
+└── <span class="file">README.md</span>           <span class="comment"># 使用说明（可选）</span>
+                </div>
+
+                <p>升级步骤：</p>
+                <pre><span class="comment"># 1. 将 JSON 转为目录格式</span>
+mkdir skills/zhihu-hot
+mv skills/zhihu-hot.json skills/zhihu-hot/skill.json
+
+<span class="comment"># 2. 创建 index.ts 自定义后置处理</span>
+<span class="keyword">cat</span> > skills/zhihu-hot/index.ts << <span class="string">'EOF'</span>
+<span class="keyword">import</span> fs <span class="keyword">from</span> <span class="string">'fs/promises'</span>;
+
+<span class="keyword">export default</span> {
+  <span class="keyword">async</span> <span class="string">postProcess</span>(result: <span class="keyword">any</span>) {
+    <span class="comment">// 生成 Markdown、发邮件、调其他 API...</span>
+    <span class="keyword">const</span> hotList = result.extracted?.hotList;
+    <span class="keyword">let</span> md = <span class="string">'# 知乎热榜\\n\\n'</span>;
+    hotList.forEach((item: <span class="keyword">any</span>, i: <span class="keyword">number</span>) => {
+      md += <span class="string">`${i + 1}. ${item.query}\\n`</span>;
+    });
+    <span class="keyword">await</span> fs.writeFile(<span class="string">'zhihu-hot.md'</span>, md);
+    <span class="keyword">return</span> { ...result, summary: result.summary + <span class="string">'\\n已生成 Markdown'</span> };
+  },
+};
+EOF</pre>
+
+                <div class="tip">
+                    <strong>包格式优势：</strong><ul>
+                        <li>后置处理逻辑写在 <code>index.ts</code> 中，不再依赖 webfunc 内置的硬编码处理器</li>
+                        <li>Skill 可以独立分享给同事，安装后立即可用</li>
+                        <li>任意 Node.js / TypeScript 逻辑都可以写（写文件、发邮件、调其他 API）</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="step">
+            <div class="step-header">
+                <div class="step-number">9</div>
+                <div class="step-title">发布 Skill</div>
+            </div>
+            <div class="step-content">
+                <p>将 Skill 目录推送到 Git 仓库即可发布：</p>
+                <pre><span class="comment"># 在 Skill 目录初始化 Git 仓库</span>
+cd skill-zhihu-hot
+git init
+git add .
+git commit -m "feat: initial zhihu-hot skill"
+
+<span class="comment"># 推送到远程仓库（GitHub / GitLab / 内网 Git）</span>
+git remote add origin git@github.com:yourname/skill-zhihu-hot.git
+git push -u origin main</pre>
+
+                <p>同事安装时直接使用 Git URL：</p>
+                <pre>node bin/webfunc install git@github.com:yourname/skill-zhihu-hot.git#main</pre>
+
+                <div class="tip">
+                    <strong>提示：</strong>也支持本地路径分享 <code>node bin/webfunc install ./path/to/skill</code>，适合局域网内临时分发。
+                </div>
+            </div>
+        </div>
+
+        <div class="step">
+            <div class="step-header">
+                <div class="step-number">10</div>
+                <div class="step-title">创建 Registry（团队 Skill 集合）</div>
+            </div>
+            <div class="step-content">
+                <p>Registry 是一个 JSON 文件，列出团队所有 Skill，方便批量管理：</p>
+                <pre>{
+  <span class="string">"name"</span>: <span class="string">"team-skills"</span>,
+  <span class="string">"version"</span>: <span class="string">"1.0.0"</span>,
+  <span class="string">"skills"</span>: [
+    {
+      <span class="string">"name"</span>: <span class="string">"zhihu-hot"</span>,
+      <span class="string">"version"</span>: <span class="string">"1.0.0"</span>,
+      <span class="string">"description"</span>: <span class="string">"获取知乎热榜"</span>,
+      <span class="string">"source"</span>: <span class="string">"git@github.com:yourname/skill-zhihu-hot.git#main"</span>
+    },
+    {
+      <span class="string">"name"</span>: <span class="string">"horae-failed-tasks"</span>,
+      <span class="string">"version"</span>: <span class="string">"1.2.0"</span>,
+      <span class="string">"description"</span>: <span class="string">"查询 Horae 失败任务"</span>,
+      <span class="string">"source"</span>: <span class="string">"git@github.com:yourname/skill-horae.git#main"</span>
+    }
+  ]
+}</pre>
+
+                <p>将 registry.json 放在团队可访问的位置（Git 仓库、共享目录等），然后添加：</p>
+                <pre><span class="comment"># 添加 registry</span>
+node bin/webfunc registry add team-skills ./team-skills/registry.json
+
+<span class="comment"># 查看已注册的 registry</span>
+node bin/webfunc registry list
+
+<span class="comment"># 移除 registry</span>
+node bin/webfunc registry remove team-skills</pre>
+            </div>
+        </div>
+
+        <div class="step">
+            <div class="step-header">
+                <div class="step-number">11</div>
+                <div class="step-title">安装、更新与移除 Skill</div>
+            </div>
+            <div class="step-content">
+                <p>安装来源支持 registry 查找、本地路径、Git URL 三种方式：</p>
+                <pre><span class="comment"># 从 registry 安装单个 skill（自动查找来源）</span>
+node bin/webfunc install zhihu-hot
+
+<span class="comment"># 安装 registry 中全部 skill</span>
+node bin/webfunc install --all
+
+<span class="comment"># 从本地路径安装</span>
+node bin/webfunc install ./skills/zhihu-hot
+
+<span class="comment"># 从 Git URL 安装</span>
+node bin/webfunc install git@github.com:yourname/skill-zhihu-hot.git#main</pre>
+
+                <p>管理已安装的 Skill：</p>
+                <pre><span class="comment"># 查看已安装 skill</span>
+node bin/webfunc skills list
+
+<span class="comment"># 更新单个 skill（重新拉取最新代码）</span>
+node bin/webfunc update zhihu-hot
+
+<span class="comment"># 更新全部已安装 skill</span>
+node bin/webfunc update --all
+
+<span class="comment"># 移除已安装 skill</span>
+node bin/webfunc remove zhihu-hot</pre>
+
+                <div class="tip">
+                    <strong>加载优先级：</strong>执行 <code>run</code> 或启动 MCP Server 时，Skill 按以下顺序查找：
+                    <ol>
+                        <li><code>~/.webfunc/installed/.links/&lt;name&gt;/</code> — 已安装的全局 Skill</li>
+                        <li><code>./skills/&lt;name&gt;/</code> — 项目本地包格式 Skill</li>
+                        <li><code>./skills/&lt;name&gt;.json</code> — 项目本地纯 JSON Skill</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+
+        <!-- MCP Server -->
+        <div class="section-title" id="mcp">四、MCP Server（大模型调用）</div>
+
+        <div class="step">
+            <div class="step-header">
+                <div class="step-number">12</div>
                 <div class="step-title">什么是 MCP Server？</div>
             </div>
             <div class="step-content">
@@ -414,7 +576,7 @@ Extracted: {
 
         <div class="step">
             <div class="step-header">
-                <div class="step-number">9</div>
+                <div class="step-number">13</div>
                 <div class="step-title">配置 Claude Desktop</div>
             </div>
             <div class="step-content">
@@ -451,7 +613,7 @@ Extracted: {
 
         <div class="step">
             <div class="step-header">
-                <div class="step-number">10</div>
+                <div class="step-number">14</div>
                 <div class="step-title">配置 Cursor</div>
             </div>
             <div class="step-content">
@@ -466,7 +628,7 @@ Command: node D:/claude/webfunc/bin/webfunc mcp -p C:/temp/chrome-dev</pre>
 
         <div class="step">
             <div class="step-header">
-                <div class="step-number">11</div>
+                <div class="step-number">15</div>
                 <div class="step-title">大模型使用示例</div>
             </div>
             <div class="step-content">
@@ -499,10 +661,48 @@ Command: node D:/claude/webfunc/bin/webfunc mcp -p C:/temp/chrome-dev</pre>
         </div>
 
         <!-- Skill Format -->
-        <div class="section-title" id="format">四、Skill 格式速查</div>
+        <div class="section-title" id="format">五、Skill 格式速查</div>
 
         <div class="step">
+            <div class="step-header">
+                <div class="step-title">包格式（推荐）</div>
+            </div>
             <div class="step-content">
+                <p>自包含目录，支持自定义 TypeScript 处理逻辑：</p>
+                <div class="file-tree">
+<span class="dir">skill-name/</span>
+├── <span class="file">skill.json</span>          <span class="comment"># 元信息、参数、steps</span>
+├── <span class="file">index.ts</span>            <span class="comment"># 自定义 hooks（可选）</span>
+└── <span class="file">README.md</span>           <span class="comment"># 使用说明（可选）</span>
+                </div>
+
+                <p><strong>skill.json</strong> 与纯 JSON 格式字段一致。<strong>index.ts</strong> 可导出生命周期 hooks：</p>
+                <pre><span class="keyword">export default</span> {
+  <span class="comment">// 执行前钩子</span>
+  <span class="keyword">async</span> <span class="string">beforeRun</span>(context) { },
+
+  <span class="comment">// 自定义单步执行（如替换为浏览器内 fetch）</span>
+  <span class="keyword">async</span> <span class="string">executeStep</span>(step, context) {
+    <span class="keyword">return</span> { status: 200, data: {} };
+  },
+
+  <span class="comment">// 后置处理：生成报告、写文件、发邮件等</span>
+  <span class="keyword">async</span> <span class="string">postProcess</span>(result, context) {
+    <span class="keyword">return</span> result;
+  },
+
+  <span class="comment">// 执行后钩子（无论成功失败都会调用）</span>
+  <span class="keyword">async</span> <span class="string">afterRun</span>(result, context) { },
+};</pre>
+            </div>
+        </div>
+
+        <div class="step">
+            <div class="step-header">
+                <div class="step-title">纯 JSON 格式（兼容）</div>
+            </div>
+            <div class="step-content">
+                <p>单文件 <code>skills/&lt;name&gt;.json</code>，适合无需自定义逻辑的简单场景：</p>
                 <pre>{
   "name": "skill-name",
   "version": "1.0.0",
@@ -530,8 +730,7 @@ Command: node D:/claude/webfunc/bin/webfunc mcp -p C:/temp/chrome-dev</pre>
   "output": {
     "summary": "获取到 {{data.length}} 条数据",
     "extract": { "data": "$.path" }
-  },
-  "post_process": "generateMarkdown"
+  }
 }</pre>
 
                 <table>
@@ -540,13 +739,16 @@ Command: node D:/claude/webfunc/bin/webfunc mcp -p C:/temp/chrome-dev</pre>
                     <tr><td><code>parameters</code></td><td>参数定义，type 可选 string/number/boolean</td></tr>
                     <tr><td><code>steps[].extract</code></td><td>JSONPath 规则，提取响应数据到变量</td></tr>
                     <tr><td><code>output.summary</code></td><td>摘要模板，支持 <code>{{param}}</code> 和 <code>{{_stepId.response.path}}</code></td></tr>
-                    <tr><td><code>post_process</code></td><td>后处理器，如 <code>generateMarkdown</code></td></tr>
                 </table>
+
+                <div class="warning">
+                    <strong>注意：</strong>包格式的 <code>index.ts</code> 优先级高于纯 JSON 的 <code>post_process</code>。如两者同时存在，<code>post_process</code> 会被忽略。
+                </div>
             </div>
         </div>
 
         <!-- FAQ -->
-        <div class="section-title" id="faq">五、常见问题</div>
+        <div class="section-title" id="faq">六、常见问题</div>
 
         <div class="step">
             <div class="step-content">

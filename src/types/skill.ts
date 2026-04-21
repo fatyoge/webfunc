@@ -39,6 +39,7 @@ export interface ExecutionContext {
   stepResults: Record<string, { response: unknown; status: number }>;
   cookies: string;
   page?: import('playwright').Page;
+  skillPath?: string;  // skill 包目录路径，供 module 读写文件
 }
 
 export interface ExecutionResult {
