@@ -1,9 +1,18 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { SkillExecutor } from '../../src/core/executor';
 import { Skill, ExecutionContext } from '../../src/types/skill';
+import type { LoadedSkill } from '../../src/core/skill-loader';
 
 vi.mock('axios');
 import axios from 'axios';
+
+function wrapSkill(skill: Skill): LoadedSkill {
+  return {
+    name: skill.name,
+    path: '/tmp',
+    skill,
+  };
+}
 
 describe('SkillExecutor', () => {
   beforeEach(() => {
@@ -40,7 +49,7 @@ describe('SkillExecutor', () => {
     };
 
     const executor = new SkillExecutor();
-    const result = await executor.run(skill, context);
+    const result = await executor.run(wrapSkill(skill), context);
 
     expect(axios.request).toHaveBeenCalledWith({
       method: 'GET',
@@ -84,9 +93,70 @@ describe('SkillExecutor', () => {
     };
 
     const executor = new SkillExecutor();
-    const result = await executor.run(skill, context);
+    const result = await executor.run(wrapSkill(skill), context);
 
     expect(result.success).toBe(false);
     expect(result.error).toContain('Assertion failed');
+  });
+});
+
+describe('SkillExecutor with module hooks', () => {
+  const executor = new SkillExecutor();
+
+  it('should call postProcess when module provides it', async () => {
+    const postProcess = vi.fn(async (result: any) => ({
+      ...result,
+      summary: result.summary + ' [processed]',
+    }));
+
+    const loaded: LoadedSkill = {
+      name: 'test',
+      path: '/tmp',
+      skill: {
+        name: 'test',
+        version: '1.0.0',
+        target_origin: 'https://example.com',
+        parameters: {},
+        steps: [],
+        output: { summary: 'Done' },
+      },
+      module: {
+        postProcess,
+      },
+    };
+
+    const result = await executor.run(loaded, {
+      params: {},
+      stepResults: {},
+      cookies: '',
+    });
+
+    expect(postProcess).toHaveBeenCalled();
+    expect(result.summary).toBe('Done [processed]');
+  });
+
+  it('should fall back to built-in post_process for legacy skills', async () => {
+    const loaded: LoadedSkill = {
+      name: 'test',
+      path: '/tmp',
+      skill: {
+        name: 'test',
+        version: '1.0.0',
+        target_origin: 'https://example.com',
+        parameters: {},
+        steps: [],
+        output: { summary: 'Done' },
+        post_process: 'generateMarkdown',
+      },
+    };
+
+    // generateMarkdown processor requires hotList, so it will gracefully fail
+    const result = await executor.run(loaded, {
+      params: {},
+      stepResults: {},
+      cookies: '',
+    });
+
+    expect(result.success).toBe(true);
   });
 });

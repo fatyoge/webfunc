@@ -1,39 +1,54 @@
 import axios from 'axios';
 import { JSONPath } from 'jsonpath-plus';
 import { Skill, ExecutionContext, ExecutionResult, SkillStep } from '../types/skill';
+import type { LoadedSkill } from './skill-loader';
 import { renderSkillStep } from './template-renderer';
 import { getPostProcessor } from './post-processors';
 
 export class SkillExecutor {
-  async run(skill: Skill, context: ExecutionContext): Promise<ExecutionResult> {
+  async run(loaded: LoadedSkill, context: ExecutionContext): Promise<ExecutionResult> {
+    const { skill, module } = loaded;
+
+    // 1. beforeRun 钩子
+    if (module?.beforeRun) {
+      await module.beforeRun(context);
+    }
+
     const stepResults: ExecutionContext['stepResults'] = {};
     const extractedValues: Record<string, unknown> = {};
 
     const mode = skill.execution_mode || 'http';
 
-    for (const step of skill.steps) {
+    // 2. 执行 steps
+    for (const step of skill.steps || []) {
       const renderContext: ExecutionContext = {
         ...context,
         stepResults,
         params: { ...context.params, ...extractedValues },
+        skillPath: loaded.path,
       };
       const renderedStep = renderSkillStep(step, renderContext);
 
       try {
-        const response =
-          mode === 'browser' && context.page
+        const response = module?.executeStep
+          ? await module.executeStep(renderedStep, renderContext)
+          : mode === 'browser' && context.page
             ? await this.runBrowserStep(renderedStep, context.page)
             : await this.runHttpStep(renderedStep, context.cookies);
 
         if (step.assert) {
           const assertError = this.validateAssertion(response.status, response.data, step.assert);
           if (assertError) {
-            return {
+            const errorResult: ExecutionResult = {
               success: false,
               summary: '',
               extracted: {},
               error: `Assertion failed on step "${step.id}": ${assertError}`,
             };
+            if (module?.afterRun) {
+              await module.afterRun(errorResult, { ...renderContext, skillPath: loaded.path });
+            }
+            return errorResult;
           }
         }
 
@@ -49,12 +64,16 @@ export class SkillExecutor {
           }
         }
       } catch (error: any) {
-        return {
+        const errorResult: ExecutionResult = {
           success: false,
           summary: '',
           extracted: {},
           error: `Request failed on step "${step.id}": ${error.message}`,
         };
+        if (module?.afterRun) {
+          await module.afterRun(errorResult, { ...renderContext, skillPath: loaded.path });
+        }
+        return errorResult;
       }
     }
 
@@ -62,7 +81,10 @@ export class SkillExecutor {
       ...context,
       stepResults,
       params: { ...context.params, ...extractedValues },
+      skillPath: loaded.path,
     };
+
+    // 3. 生成基础 result
     const renderedOutput = renderSkillStep(
       { id: 'output', method: 'GET', url: skill.output.summary, ...skill.output },
       finalContext
@@ -83,11 +105,19 @@ export class SkillExecutor {
       extracted,
     };
 
-    if (skill.post_process) {
+    // 4. postProcess 钩子（优先用模块的，否则回退到内置处理器）
+    if (module?.postProcess) {
+      result = await module.postProcess(result, finalContext);
+    } else if (skill.post_process) {
       const processor = getPostProcessor(skill.post_process);
       if (processor) {
         result = await processor(result, skill);
       }
+    }
+
+    // 5. afterRun 钩子
+    if (module?.afterRun) {
+      await module.afterRun(result, finalContext);
     }
 
     return result;
@@ -135,17 +165,14 @@ export class SkillExecutor {
       const res = await fetch(args.url, options);
       const text = await res.text();
 
-      // Try to parse as JSON
       let data: unknown = text;
       try {
         data = JSON.parse(text);
       } catch {
-        // Not JSON — try to extract table data from HTML
         const parser = new DOMParser();
         const doc = parser.parseFromString(text, 'text/html');
         const tables = Array.from(doc.querySelectorAll('table'));
         if (tables.length > 0) {
-          // Find the largest table (likely the data table)
           let bestTable: HTMLTableElement | null = null;
           let bestRows = 0;
           for (const t of tables) {
