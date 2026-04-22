@@ -6,6 +6,7 @@ import { createListCommand } from './list';
 import { createMcpCommand } from './mcp';
 import { createRegistryCommand } from './registry';
 import { createInstallCommand, createRemoveCommand, createUpdateCommand } from './install';
+import { createPackageCommand } from './package';
 
 const program = new Command();
 
@@ -22,5 +23,6 @@ program.addCommand(createRegistryCommand());
 program.addCommand(createInstallCommand());
 program.addCommand(createRemoveCommand());
 program.addCommand(createUpdateCommand());
+program.addCommand(createPackageCommand());
 
 program.parse();

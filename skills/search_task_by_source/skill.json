@@ -1,0 +1,42 @@
+{
+  "name": "search_task_by_source",
+  "version": "1.0.0",
+  "target_origin": "http://horae.gf.com.cn/",
+  "execution_mode": "browser",
+  "parameters": {
+    "keyword": {
+      "type": "string",
+      "description": "数据源名称关键字",
+      "default": ""
+    }
+  },
+  "steps": [
+    {
+      "id": "step_0",
+      "method": "POST",
+      "url": "http://horae.gf.com.cn/Hive/task/list",
+      "headers": {
+        "content-type": "application/x-www-form-urlencoded",
+        "origin": "http://horae.gf.com.cn",
+        "referer": "http://horae.gf.com.cn/Hive//task/list",
+        "upgrade-insecure-requests": "1",
+        "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36 Edg/147.0.0.0"
+      },
+      "body": "search_type=SS&keyword={{keyword}}&incharge_s_type=fuzzy&in_charge=&topic_name=&status=Y&task_type=&cycle_unit=&cluster="
+    },
+    {
+      "id": "step_1",
+      "method": "GET",
+      "url": "http://horae.gf.com.cn/Hive/static/ace/assets/fonts/fontawesome-webfont.woff2?v=4.5.0",
+      "headers": {
+        "referer": ""
+      },
+      "query": {
+        "v": "4.5.0"
+      }
+    }
+  ],
+  "output": {
+    "summary": "Executed search_task_by_srouce"
+  }
+}

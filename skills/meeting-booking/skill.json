@@ -1,0 +1,100 @@
+{
+  "name": "meeting-booking",
+  "version": "2.0.0",
+  "description": "自动查询并预订会议室",
+  "target_origin": "http://ioa.gf.com.cn/",
+  "execution_mode": "browser",
+  "parameters": {
+    "date": {
+      "type": "string",
+      "description": "会议日期，如 2026-04-22，默认为今天",
+      "default": ""
+    },
+    "startTime": {
+      "type": "string",
+      "description": "开始时间，如 10:00",
+      "default": "10:00"
+    },
+    "endTime": {
+      "type": "string",
+      "description": "结束时间，如 11:00。不传则默认为 startTime + 1小时",
+      "default": ""
+    },
+    "floor": {
+      "type": "string",
+      "description": "楼层关键字，如 200 表示 20 楼",
+      "default": "200"
+    },
+    "excludeRoom": {
+      "type": "string",
+      "description": "排除的房间号，如 2001",
+      "default": "2001"
+    },
+    "subject": {
+      "type": "string",
+      "description": "会议主题",
+      "default": "工作会议"
+    },
+    "bookingBy": {
+      "type": "string",
+      "description": "预订人",
+      "default": "ouruibin"
+    },
+    "meetingToken": {
+      "type": "string",
+      "description": "可选：手动指定 Meeting API Token（默认自动从浏览器 session 获取）",
+      "default": ""
+    }
+  },
+  "steps": [
+    {
+      "id": "get_info",
+      "method": "GET",
+      "url": "http://ioa.gf.com.cn/meetingApi/getInfo",
+      "headers": {
+        "referer": "http://ioa.gf.com.cn/meeting/",
+        "accept": "application/json, text/plain, */*"
+      }
+    },
+    {
+      "id": "get_room_area",
+      "method": "GET",
+      "url": "http://ioa.gf.com.cn/meetingApi/meeting/strategy/area?id={{roomId}}",
+      "headers": {
+        "referer": "http://ioa.gf.com.cn/meeting/",
+        "accept": "application/json, text/plain, */*"
+      }
+    },
+    {
+      "id": "book_meeting",
+      "method": "POST",
+      "url": "http://ioa.gf.com.cn/meetingApi/meeting",
+      "headers": {
+        "referer": "http://ioa.gf.com.cn/meeting/",
+        "accept": "application/json, text/plain, */*",
+        "content-type": "application/json;charset=UTF-8"
+      },
+      "assert": {
+        "status": 200
+      }
+    },
+    {
+      "id": "verify_meeting",
+      "method": "GET",
+      "url": "http://ioa.gf.com.cn/meetingApi/meeting/myMeeting",
+      "query": {
+        "pageNum": "1",
+        "pageSize": "9999",
+        "meetingDate": "{{date}}",
+        "isHideCancelStatus": "true"
+      },
+      "headers": {
+        "referer": "http://ioa.gf.com.cn/meeting/",
+        "accept": "application/json, text/plain, */*"
+      }
+    }
+  ],
+  "output": {
+    "summary": "会议室预订完成"
+  }
+}
